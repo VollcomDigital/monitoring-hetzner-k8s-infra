@@ -1,0 +1,21 @@
+controller:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  service:
+    annotations:
+      load-balancer.hetzner.cloud/name: "monitoring-nginx-ingress"
+      load-balancer.hetzner.cloud/type: "lb11"
+      load-balancer.hetzner.cloud/use-private-ip: "true"
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: monitoring
+
+defaultBackend:
+  enabled: true

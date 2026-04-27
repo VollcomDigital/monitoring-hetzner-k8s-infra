@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: platform-health-rules
+  namespace: monitoring
+  labels:
+    role: monitoring-rules
+spec:
+  groups:
+    - name: platform.health
+      rules:
+        - alert: TargetDown
+          expr: up{job!~"prometheus|alertmanager"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Target {{ $labels.instance }} is down"
+            description: "Prometheus scrape target {{ $labels.job }} on {{ $labels.instance }} is down for 5m."
+
+        - alert: NodeHighCpuUsage
+          expr: (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.9
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node CPU usage is critically high"
+            description: "Node {{ $labels.instance }} has CPU usage above 90% for 10 minutes."

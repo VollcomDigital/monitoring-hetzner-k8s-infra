@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-remote-write-example
+  namespace: monitoring
+data:
+  values-remote-write.yaml: |
+    prometheus:
+      prometheusSpec:
+        externalLabels:
+          cluster: ${PROD_CLUSTER_NAME}
+          env: ${PROD_ENV}
+        remoteWrite:
+          - url: https://${PROMETHEUS_HOST}/api/v1/write
+            writeRelabelConfigs:
+              - sourceLabels: [__name__]
+                regex: ".*"
+                action: keep
+            queueConfig:
+              capacity: 2500
+              maxShards: 50
+              minShards: 1
+              maxSamplesPerSend: 1000

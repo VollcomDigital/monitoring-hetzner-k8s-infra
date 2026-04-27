@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: ${LETSENCRYPT_ISSUER}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ${GRAFANA_HOST}
+      secretName: grafana-tls
+  rules:
+    - host: ${GRAFANA_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 80

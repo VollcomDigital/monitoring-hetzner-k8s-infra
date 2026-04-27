@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: workload-alert-rules
+  namespace: monitoring
+  labels:
+    role: monitoring-rules
+spec:
+  groups:
+    - name: platform.workloads
+      rules:
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total[10m]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod has high restart count"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarted more than 3 times in 10m."
+
+        - alert: NamespaceMemoryPressure
+          expr: |
+            (
+              sum by (namespace) (container_memory_working_set_bytes{container!=""})
+              /
+              sum by (namespace) (kube_resourcequota{resource="limits.memory",type="hard"})
+            ) > 0.9
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Namespace memory limit pressure is high"
+            description: "Namespace {{ $labels.namespace }} uses more than 90% of configured memory limit."

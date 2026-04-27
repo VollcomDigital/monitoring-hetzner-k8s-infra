@@ -1,0 +1,41 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+*-kubeconfig
+kubeconfig
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Helm / K8s local overrides
+**/values-local.yaml
+**/values.*.local.yaml
+**/secrets*.yaml
+!**/secrets.example.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE (optional — remove if you track team settings)
+.idea/
+*.swp
+*.swo
+*~
