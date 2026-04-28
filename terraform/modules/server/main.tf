@@ -1,8 +1,4 @@
-resource "hcloud_ssh_key" "cluster" {
-  name       = "${var.cluster_name}-key"
-  public_key = file(pathexpand(var.ssh_public_key_path))
-  labels     = var.labels
-}
+data "hcloud_ssh_keys" "existing" {}
 
 resource "random_password" "k3s_token" {
   count   = var.k3s_token == "" ? 1 : 0
@@ -11,7 +7,20 @@ resource "random_password" "k3s_token" {
 }
 
 locals {
-  resolved_k3s_token = var.k3s_token != "" ? var.k3s_token : random_password.k3s_token[0].result
+  requested_ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
+  matching_ssh_key_ids = [
+    for key in data.hcloud_ssh_keys.existing.ssh_keys : key.id
+    if trimspace(key.public_key) == local.requested_ssh_public_key
+  ]
+  resolved_ssh_key_id = element(concat(local.matching_ssh_key_ids, hcloud_ssh_key.cluster[*].id), 0)
+  resolved_k3s_token  = var.k3s_token != "" ? var.k3s_token : random_password.k3s_token[0].result
+}
+
+resource "hcloud_ssh_key" "cluster" {
+  count      = length(local.matching_ssh_key_ids) == 0 ? 1 : 0
+  name       = "${var.cluster_name}-key"
+  public_key = local.requested_ssh_public_key
+  labels     = var.labels
 }
 
 resource "hcloud_server" "control_plane" {
@@ -19,7 +28,7 @@ resource "hcloud_server" "control_plane" {
   server_type = var.control_plane_server_type
   image       = var.control_plane_image
   location    = var.location
-  ssh_keys    = [hcloud_ssh_key.cluster.id]
+  ssh_keys    = [local.resolved_ssh_key_id]
   firewall_ids = [
     var.control_plane_firewall_id
   ]
@@ -59,7 +68,7 @@ resource "hcloud_server" "worker" {
   server_type = var.worker_server_type
   image       = var.worker_image
   location    = var.location
-  ssh_keys    = [hcloud_ssh_key.cluster.id]
+  ssh_keys    = [local.resolved_ssh_key_id]
   firewall_ids = [
     var.worker_firewall_id
   ]
