@@ -7,6 +7,7 @@
 id_rsa*
 *-kubeconfig
 kubeconfig
+kubeconfig.yaml
 
 # Terraform
 .terraform/
