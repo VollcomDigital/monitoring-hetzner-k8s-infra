@@ -41,6 +41,15 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1 || true
 helm repo update
 
+kubectl apply -f "$PROJECT_DIR/monitoring/alertmanager/alertmanager-config.yaml"
+
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --version 61.7.2 \
+  --values "$PROJECT_DIR/helm/kube-prometheus-stack/values.yaml" \
+  --set grafana.adminPassword="${GRAFANA_ADMIN_PASSWORD:-admin}" \
+  --wait --timeout 15m
+
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
   --namespace monitoring \
   --create-namespace \
@@ -64,15 +73,6 @@ if [[ "$ENABLE_CERT_MANAGER" == "true" ]]; then
   sed "s#\${ACME_EMAIL}#${ACME_EMAIL}#g" \
     "$PROJECT_DIR/kubernetes/cert-manager/cluster-issuers.yaml" | kubectl apply -f -
 fi
-
-kubectl apply -f "$PROJECT_DIR/monitoring/alertmanager/alertmanager-config.yaml"
-
-helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace monitoring \
-  --version 61.7.2 \
-  --values "$PROJECT_DIR/helm/kube-prometheus-stack/values.yaml" \
-  --set grafana.adminPassword="${GRAFANA_ADMIN_PASSWORD:-admin}" \
-  --wait --timeout 15m
 
 helm upgrade --install loki grafana/loki \
   --namespace monitoring \
