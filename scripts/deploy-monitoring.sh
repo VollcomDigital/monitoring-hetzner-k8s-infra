@@ -83,8 +83,24 @@ if [[ "$ENABLE_CERT_MANAGER" == "true" ]]; then
     --values "$PROJECT_DIR/helm/cert-manager/values.yaml" \
     --wait --timeout 10m
 
-  sed "s#\${ACME_EMAIL}#${ACME_EMAIL}#g" \
-    "$PROJECT_DIR/kubernetes/cert-manager/cluster-issuers.yaml" | kubectl apply -f -
+  kubectl rollout status deployment/cert-manager -n monitoring --timeout=180s
+  kubectl rollout status deployment/cert-manager-cainjector -n monitoring --timeout=180s
+  kubectl rollout status deployment/cert-manager-webhook -n monitoring --timeout=180s
+
+  issuer_apply_ok=false
+  for attempt in {1..18}; do
+    if sed "s#\${ACME_EMAIL}#${ACME_EMAIL}#g" \
+      "$PROJECT_DIR/kubernetes/cert-manager/cluster-issuers.yaml" | kubectl apply -f -; then
+      issuer_apply_ok=true
+      break
+    fi
+    echo "cert-manager webhook not ready yet; retry ${attempt}/18 in 10s..."
+    sleep 10
+  done
+  if [[ "$issuer_apply_ok" != "true" ]]; then
+    echo "ERROR: applying ClusterIssuers failed after retries. Check: kubectl -n monitoring get pods -l app.kubernetes.io/name=webhook"
+    exit 1
+  fi
 fi
 
 helm upgrade --install loki grafana/loki \
