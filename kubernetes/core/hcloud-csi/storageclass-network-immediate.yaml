@@ -1,0 +1,9 @@
+# Immediate binding: provisions volume before pod schedule (easier to debug CSI; avoids WFFC stalls).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: hcloud-network-volumes-immediate
+provisioner: csi.hetzner.cloud
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true

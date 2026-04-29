@@ -1,0 +1,5 @@
+# Apply with MONITORING_USE_EPHEMERAL_STORAGE=true (see deploy-monitoring.sh)
+
+singleBinary:
+  persistence:
+    enabled: false

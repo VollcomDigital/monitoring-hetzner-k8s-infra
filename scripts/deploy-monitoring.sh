@@ -13,6 +13,14 @@ export KUBECONFIG="${KUBECONFIG:-$PROJECT_DIR/kubeconfig.yaml}"
 HCLOUD_REGION="${HCLOUD_REGION:-nbg1}"
 ENABLE_CERT_MANAGER="${ENABLE_CERT_MANAGER:-false}"
 LETSENCRYPT_ISSUER="${LETSENCRYPT_ISSUER:-letsencrypt-staging}"
+MONITORING_USE_EPHEMERAL_STORAGE="${MONITORING_USE_EPHEMERAL_STORAGE:-false}"
+
+MONITORING_KPS_EXTRA_ARGS=()
+MONITORING_LOKI_EXTRA_ARGS=()
+if [[ "$MONITORING_USE_EPHEMERAL_STORAGE" == "true" ]]; then
+  MONITORING_KPS_EXTRA_ARGS=( -f "$PROJECT_DIR/helm/kube-prometheus-stack/values-ephemeral.yaml" )
+  MONITORING_LOKI_EXTRA_ARGS=( -f "$PROJECT_DIR/helm/loki/values-ephemeral.yaml" )
+fi
 
 if [[ ! -f "$KUBECONFIG" ]]; then
   echo "ERROR: kubeconfig not found at $KUBECONFIG"
@@ -47,6 +55,7 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
   --namespace monitoring \
   --version 61.7.2 \
   --values "$PROJECT_DIR/helm/kube-prometheus-stack/values.yaml" \
+  "${MONITORING_KPS_EXTRA_ARGS[@]}" \
   --set grafana.adminPassword="${GRAFANA_ADMIN_PASSWORD:-admin}" \
   --wait --timeout 15m
 
@@ -78,6 +87,7 @@ helm upgrade --install loki grafana/loki \
   --namespace monitoring \
   --version 6.11.0 \
   --values "$PROJECT_DIR/helm/loki/values.yaml" \
+  "${MONITORING_LOKI_EXTRA_ARGS[@]}" \
   --wait --timeout 10m
 
 helm upgrade --install promtail grafana/promtail \

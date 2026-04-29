@@ -30,7 +30,7 @@ singleBinary:
       memory: 1Gi
   persistence:
     enabled: true
-    storageClass: hcloud-network-volumes
+    storageClass: hcloud-network-volumes-immediate
     size: 50Gi
 
 backend:

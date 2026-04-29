@@ -1,0 +1,14 @@
+# Apply with: MONITORING_USE_EPHEMERAL_STORAGE=true ./scripts/deploy-monitoring.sh
+# No PVCs (TSDB / Grafana DB lost on restart). Use when CSI volumes cannot bind.
+
+grafana:
+  persistence:
+    enabled: false
+
+prometheus:
+  prometheusSpec:
+    storageSpec: null
+
+alertmanager:
+  alertmanagerSpec:
+    storage: null
