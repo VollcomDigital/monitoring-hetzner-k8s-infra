@@ -4,9 +4,6 @@ package_upgrade: false
 
 packages:
   - curl
-  - jq
-  - open-iscsi
-  - nfs-common
 
 write_files:
   - path: /etc/sysctl.d/99-kubernetes.conf
@@ -38,6 +35,10 @@ write_files:
 runcmd:
   - sysctl --system
   - modprobe br_netfilter overlay
+  - |
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq jq open-iscsi nfs-common
   %{ if is_first_server }
   - |
     curl -sfL https://get.k3s.io | \

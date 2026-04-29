@@ -4,9 +4,6 @@ package_upgrade: false
 
 packages:
   - curl
-  - jq
-  - open-iscsi
-  - nfs-common
 
 write_files:
   - path: /etc/sysctl.d/99-kubernetes.conf
@@ -23,6 +20,10 @@ write_files:
 runcmd:
   - sysctl --system
   - modprobe br_netfilter overlay
+  - |
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq jq open-iscsi nfs-common
   - |
     until curl -sk https://${api_server_lb}:6443/healthz >/dev/null 2>&1; do
       sleep 10

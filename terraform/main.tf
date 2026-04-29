@@ -117,7 +117,7 @@ resource "null_resource" "kubeconfig" {
   provisioner "local-exec" {
     command = <<-EOT
       set -euo pipefail
-      SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+      SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=10"
       SSH_KEY="${pathexpand(var.ssh_private_key_path)}"
       SSH_HOST="root@${module.servers.control_plane_ip}"
 
