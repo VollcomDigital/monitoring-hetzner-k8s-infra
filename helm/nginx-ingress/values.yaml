@@ -1,4 +1,8 @@
 controller:
+  # When the API server cannot reach ClusterIP admission webhooks (common on some k3s/control-plane setups),
+  # Ingress creates fail with validate.nginx.ingress.kubernetes.io timeouts. Disable to skip server-side validation.
+  admissionWebhooks:
+    enabled: false
   replicaCount: 2
   resources:
     requests:
