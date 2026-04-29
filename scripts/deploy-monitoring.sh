@@ -98,7 +98,22 @@ if [[ "$ENABLE_CERT_MANAGER" == "true" ]]; then
     sleep 10
   done
   if [[ "$issuer_apply_ok" != "true" ]]; then
-    echo "ERROR: applying ClusterIssuers failed after retries. Check: kubectl -n monitoring get pods -l app.kubernetes.io/name=webhook"
+    echo "WARN: Admission webhooks block ClusterIssuer create; removing webhook configs once, then restoring via Helm."
+    kubectl delete validatingwebhookconfiguration cert-manager-webhook --ignore-not-found
+    kubectl delete mutatingwebhookconfiguration cert-manager-webhook --ignore-not-found
+    sleep 3
+    if sed "s#\${ACME_EMAIL}#${ACME_EMAIL}#g" \
+      "$PROJECT_DIR/kubernetes/cert-manager/cluster-issuers.yaml" | kubectl apply -f -; then
+      issuer_apply_ok=true
+    fi
+    helm upgrade --install cert-manager jetstack/cert-manager \
+      --namespace monitoring \
+      --version v1.15.3 \
+      --values "$PROJECT_DIR/helm/cert-manager/values.yaml" \
+      --wait --timeout 10m
+  fi
+  if [[ "$issuer_apply_ok" != "true" ]]; then
+    echo "ERROR: ClusterIssuers still not applied. Check: kubectl -n monitoring logs deploy/cert-manager-webhook"
     exit 1
   fi
 fi

@@ -7,6 +7,12 @@ startupapicheck:
 
 replicaCount: 2
 
+# k3s: apiserver often cannot reach webhook ClusterIP; hostNetwork + unique securePort avoids kubelet (10250).
+webhook:
+  replicaCount: 1
+  hostNetwork: true
+  securePort: 10260
+
 prometheus:
   enabled: true
   servicemonitor:
