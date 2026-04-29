@@ -33,6 +33,11 @@ loki:
     retention_period: 720h
   compactor:
     retention_enabled: true
+  rulerConfig:
+    storage:
+      type: local
+      local:
+        directory: /var/loki/rules
   readinessProbe:
     initialDelaySeconds: 45
     periodSeconds: 15
