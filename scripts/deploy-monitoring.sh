@@ -34,7 +34,6 @@ kubectl apply -f "$PROJECT_DIR/kubernetes/monitoring/namespace.yaml"
 
 kubectl apply -k "$PROJECT_DIR/kubernetes/core/hcloud-ccm/"
 kubectl apply -k "$PROJECT_DIR/kubernetes/core/hcloud-csi/"
-kubectl apply -f "$PROJECT_DIR/kubernetes/core/hcloud-csi/storage-classes.yaml"
 
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
 helm repo add jetstack https://charts.jetstack.io >/dev/null 2>&1 || true
