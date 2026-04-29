@@ -1,6 +1,10 @@
 crds:
   enabled: true
 
+# k3s: install hook times out before webhook is ready; cert-manager still functions.
+startupapicheck:
+  enabled: false
+
 replicaCount: 2
 
 prometheus:
