@@ -13,7 +13,7 @@ export KUBECONFIG="${KUBECONFIG:-$PROJECT_DIR/kubeconfig.yaml}"
 HCLOUD_REGION="${HCLOUD_REGION:-nbg1}"
 ENABLE_CERT_MANAGER="${ENABLE_CERT_MANAGER:-false}"
 LETSENCRYPT_ISSUER="${LETSENCRYPT_ISSUER:-letsencrypt-staging}"
-MONITORING_USE_EPHEMERAL_STORAGE="${MONITORING_USE_EPHEMERAL_STORAGE:-false}"
+MONITORING_USE_EPHEMERAL_STORAGE="${MONITORING_USE_EPHEMERAL_STORAGE:-true}"
 
 MONITORING_KPS_EXTRA_ARGS=()
 MONITORING_LOKI_EXTRA_ARGS=()
@@ -39,6 +39,10 @@ if ! helm version >/dev/null 2>&1; then
 fi
 
 kubectl apply -f "$PROJECT_DIR/kubernetes/monitoring/namespace.yaml"
+
+if [[ "$MONITORING_USE_EPHEMERAL_STORAGE" == "true" ]]; then
+  echo "MONITORING_USE_EPHEMERAL_STORAGE=true: installing without PVCs (set to false when hcloud volumes bind)."
+fi
 
 kubectl apply -k "$PROJECT_DIR/kubernetes/core/hcloud-ccm/"
 kubectl apply -k "$PROJECT_DIR/kubernetes/core/hcloud-csi/"
