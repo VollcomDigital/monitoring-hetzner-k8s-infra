@@ -1,5 +1,12 @@
 # Apply with MONITORING_USE_EPHEMERAL_STORAGE=true (see deploy-monitoring.sh)
+# Without a PVC, chart omits /var/loki; Loki needs a writable path for chunks/WAL (read-only container FS).
 
 singleBinary:
   persistence:
     enabled: false
+  extraVolumes:
+    - name: storage
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: storage
+      mountPath: /var/loki

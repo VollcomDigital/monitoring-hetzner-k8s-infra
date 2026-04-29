@@ -123,7 +123,7 @@ helm upgrade --install loki grafana/loki \
   --version 6.11.0 \
   --values "$PROJECT_DIR/helm/loki/values.yaml" \
   "${MONITORING_LOKI_EXTRA_ARGS[@]+"${MONITORING_LOKI_EXTRA_ARGS[@]}"}" \
-  --wait --timeout 10m
+  --wait --timeout 20m
 
 helm upgrade --install promtail grafana/promtail \
   --namespace monitoring \
