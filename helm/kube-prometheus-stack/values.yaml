@@ -16,7 +16,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: hcloud-volumes
+          storageClassName: hcloud-network-volumes
           accessModes:
             - ReadWriteOnce
           resources:
@@ -38,7 +38,7 @@ alertmanager:
     storage:
       volumeClaimTemplate:
         spec:
-          storageClassName: hcloud-volumes
+          storageClassName: hcloud-network-volumes
           accessModes:
             - ReadWriteOnce
           resources:
@@ -55,7 +55,7 @@ grafana:
       memory: 512Mi
   persistence:
     enabled: true
-    storageClassName: hcloud-volumes
+    storageClassName: hcloud-network-volumes
     size: 10Gi
   dashboardProviders:
     dashboardproviders.yaml:

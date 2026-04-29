@@ -5,3 +5,4 @@ namespace: kube-system
 
 resources:
   - https://raw.githubusercontent.com/hetznercloud/csi-driver/v2.9.0/deploy/kubernetes/hcloud-csi.yml
+  - storageclass-network.yaml
