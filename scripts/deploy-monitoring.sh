@@ -23,6 +23,8 @@ if [[ "$MONITORING_USE_EPHEMERAL_STORAGE" == "true" ]]; then
 fi
 if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
   MONITORING_KPS_EXTRA_ARGS+=( -f "$PROJECT_DIR/helm/kube-prometheus-stack/values-lb-ip-ui.yaml" )
+else
+  MONITORING_KPS_EXTRA_ARGS+=( -f "$PROJECT_DIR/helm/kube-prometheus-stack/values-prometheus-ingress-host.yaml" )
 fi
 
 if [[ ! -f "$KUBECONFIG" ]]; then
@@ -222,6 +224,13 @@ if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
       --set "prometheus.prometheusSpec.externalUrl=http://${lb_ip}/prometheus" \
       --wait --timeout 10m
   fi
+elif [[ -n "${PROMETHEUS_HOST:-}" ]]; then
+  helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+    --namespace monitoring \
+    --version 61.7.2 \
+    --reuse-values \
+    --set "prometheus.prometheusSpec.externalUrl=https://${PROMETHEUS_HOST}/" \
+    --wait --timeout 10m
 fi
 
 echo ""

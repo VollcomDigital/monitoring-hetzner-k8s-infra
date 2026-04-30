@@ -101,6 +101,7 @@ Optional informational aliases (not read by the deploy script unless you extend 
 
 - **Ephemeral mode:** `helm/kube-prometheus-stack/values-ephemeral.yaml` and `helm/loki/values-ephemeral.yaml` are merged when `MONITORING_USE_EPHEMERAL_STORAGE=true`.
 - **LB IP UI paths:** `helm/kube-prometheus-stack/values-lb-ip-ui.yaml` is merged when `MONITORING_UI_VIA_LB_IP=true` (Prometheus `routePrefix` `/prometheus`). The deploy script then sets `prometheus.prometheusSpec.externalUrl` from the ingress controller’s load balancer address when it is known.
+- **Hostname Ingress (default when LB IP mode is off):** `helm/kube-prometheus-stack/values-prometheus-ingress-host.yaml` sets Prometheus `routePrefix` to **`/`** so the Prometheus UI matches `kubernetes/monitoring/prometheus-ingress.yaml`. When **`PROMETHEUS_HOST`** is set and **`MONITORING_UI_VIA_LB_IP`** is false, the script sets **`externalUrl`** to **`https://${PROMETHEUS_HOST}/`**.
 - **Persistent mode:** set `MONITORING_USE_EPHEMERAL_STORAGE=false` and ensure StorageClasses and CSI work so PVCs for Grafana, Prometheus, and Loki can bind.
 
 ## DNS and TLS
@@ -110,6 +111,15 @@ Optional informational aliases (not read by the deploy script unless you extend 
 3. **No DNS:** Use `MONITORING_UI_VIA_LB_IP=true` for Grafana, Prometheus, and the Loki API path on the **same** load balancer IP, or `kubectl port-forward` (see below).
 
 For HTTPS with Let’s Encrypt, set `ENABLE_CERT_MANAGER=true`, valid hostnames, and DNS that resolves to the load balancer before certificates can succeed.
+
+### Moving from LB IP only to your own domain
+
+You can start with **`MONITORING_UI_VIA_LB_IP=true`** (HTTP on the load balancer IP) and later switch to hostnames:
+
+1. Create **A/AAAA** (or ExternalDNS) records for your new names pointing to the **same** ingress load balancer address as before.
+2. In `.env`, set **`GRAFANA_HOST`**, **`PROMETHEUS_HOST`**, and **`LOKI_HOST`** to those FQDNs, set **`MONITORING_UI_VIA_LB_IP=false`**, enable **`ENABLE_CERT_MANAGER`** if you want TLS, and run **`./scripts/deploy-monitoring.sh`** again.
+
+The script removes the combined IP Ingress, applies the per-host Ingress manifests, resets Prometheus **`routePrefix`** to **`/`** (not `/prometheus`), and sets **`prometheus.prometheusSpec.externalUrl`** to **`https://${PROMETHEUS_HOST}/`** when **`PROMETHEUS_HOST`** is set.
 
 ## Grafana and UI access
 

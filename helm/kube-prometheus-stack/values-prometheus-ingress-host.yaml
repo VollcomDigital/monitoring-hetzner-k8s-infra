@@ -1,0 +1,5 @@
+# Used when MONITORING_UI_VIA_LB_IP=false: Prometheus UI at / on the hostname Ingress.
+# Resets routePrefix after turning off LB IP mode (Helm would otherwise keep /prometheus).
+prometheus:
+  prometheusSpec:
+    routePrefix: /
