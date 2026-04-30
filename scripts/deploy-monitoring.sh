@@ -21,6 +21,9 @@ if [[ "$MONITORING_USE_EPHEMERAL_STORAGE" == "true" ]]; then
   MONITORING_KPS_EXTRA_ARGS=( -f "$PROJECT_DIR/helm/kube-prometheus-stack/values-ephemeral.yaml" )
   MONITORING_LOKI_EXTRA_ARGS=( -f "$PROJECT_DIR/helm/loki/values-ephemeral.yaml" )
 fi
+if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
+  MONITORING_KPS_EXTRA_ARGS+=( -f "$PROJECT_DIR/helm/kube-prometheus-stack/values-lb-ip-ui.yaml" )
+fi
 
 if [[ ! -f "$KUBECONFIG" ]]; then
   echo "ERROR: kubeconfig not found at $KUBECONFIG"
@@ -202,18 +205,37 @@ if [[ -n "${LOKI_HOST:-}" ]]; then
 fi
 
 if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
-  kubectl apply -f "$PROJECT_DIR/kubernetes/monitoring/grafana-ingress-ip.yaml"
+  kubectl delete ingress grafana-by-lb-ip -n monitoring --ignore-not-found
+  kubectl apply -f "$PROJECT_DIR/kubernetes/monitoring/monitoring-ui-lb-ip.yaml"
+else
+  kubectl delete ingress monitoring-ui-by-lb-ip grafana-by-lb-ip -n monitoring --ignore-not-found
+fi
+
+if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
+  lb_ip="$(kubectl -n monitoring get svc ingress-nginx-controller \
+    -o jsonpath='{.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+  if [[ -n "$lb_ip" ]]; then
+    helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+      --namespace monitoring \
+      --version 61.7.2 \
+      --reuse-values \
+      --set "prometheus.prometheusSpec.externalUrl=http://${lb_ip}/prometheus" \
+      --wait --timeout 10m
+  fi
 fi
 
 echo ""
 echo "Monitoring platform deployed successfully."
 if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
-  lb_ip="$(kubectl -n monitoring get svc ingress-nginx-controller \
-    -o jsonpath='{.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+  lb_ip="${lb_ip:-$(kubectl -n monitoring get svc ingress-nginx-controller \
+    -o jsonpath='{.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)}"
   if [[ -n "$lb_ip" ]]; then
-    echo "Grafana (HTTP via LB IP): http://${lb_ip}/"
+    echo "HTTP via load balancer (no DNS):"
+    echo "  Grafana:     http://${lb_ip}/"
+    echo "  Prometheus:  http://${lb_ip}/prometheus/"
+    echo "  Loki API:    http://${lb_ip}/loki/  (Grafana Explore uses the in-cluster URL; this is for curl / tools)"
   else
-    echo "Grafana (HTTP via LB IP): set MONITORING_UI_VIA_LB_IP and wait for ingress-nginx-controller EXTERNAL-IP, then open http://<that-ip>/"
+    echo "MONITORING_UI_VIA_LB_IP: wait for ingress-nginx-controller EXTERNAL-IP, then use http://<ip>/, /prometheus/, /loki/"
   fi
 fi
 echo "Grafana URL (hostname ingress): https://${GRAFANA_HOST:-<set-GRAFANA_HOST-or-use-MONITORING_UI_VIA_LB_IP>}"

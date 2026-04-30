@@ -1,0 +1,37 @@
+# Single HTTP Ingress on the load balancer IP (no host rule).
+# Paths: / Grafana, /prometheus Prometheus, /loki Loki API (explore via Grafana or curl).
+# Requires MONITORING_UI_VIA_LB_IP=true and Prometheus routePrefix /prometheus (values-lb-ip-ui.yaml).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ui-by-lb-ip
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-prometheus
+                port:
+                  number: 9090
+          - path: /loki
+            pathType: Prefix
+            backend:
+              service:
+                name: loki
+                port:
+                  number: 3100
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 80

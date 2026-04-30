@@ -1,0 +1,4 @@
+# Used when MONITORING_UI_VIA_LB_IP=true: Prometheus UI/API under http://<LB-IP>/prometheus/
+prometheus:
+  prometheusSpec:
+    routePrefix: /prometheus

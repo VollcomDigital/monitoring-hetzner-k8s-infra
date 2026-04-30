@@ -85,8 +85,8 @@ Equivalent helper for provisioning:
 | `HCLOUD_REGION` | Hetzner location for LB annotations (default `nbg1`). |
 | `KUBECONFIG` | Path to kubeconfig (default `./kubeconfig.yaml`). |
 | `MONITORING_USE_EPHEMERAL_STORAGE` | If `true`, Grafana/Prometheus/Loki use emptyDir-style storage via extra Helm values so the stack installs without waiting on PVC binding (default `true`). Set `false` when CSI volumes bind and you want durable TSDB, Grafana, and Loki data on disks. |
-| `GRAFANA_HOST`, `PROMETHEUS_HOST`, `LOKI_HOST` | FQDNs you control for Grafana, Prometheus, and Loki Ingress (e.g. `grafana.mydomain.com`). **Names such as `*.example.com` only work if you own that DNS zone**—otherwise leave empty, use **MONITORING_UI_VIA_LB_IP** for Grafana, or use port-forward. Empty values skip applying that Ingress. |
-| `MONITORING_UI_VIA_LB_IP` | If `true`, deploys `kubernetes/monitoring/grafana-ingress-ip.yaml` so Grafana is reachable at **`http://<ingress-load-balancer-IP>/`** (HTTP, no DNS). |
+| `GRAFANA_HOST`, `PROMETHEUS_HOST`, `LOKI_HOST` | FQDNs you control for Grafana, Prometheus, and Loki Ingress (e.g. `grafana.mydomain.com`). **Names such as `*.example.com` only work if you own that DNS zone**—otherwise leave empty, use **MONITORING_UI_VIA_LB_IP**, or use port-forward. Empty values skip applying that Ingress. |
+| `MONITORING_UI_VIA_LB_IP` | If `true`, deploys `kubernetes/monitoring/monitoring-ui-lb-ip.yaml`, merges `helm/kube-prometheus-stack/values-lb-ip-ui.yaml` (Prometheus `routePrefix` `/prometheus`), and sets Prometheus `externalUrl` to the LB when the address is available. **HTTP (no DNS):** `http://<LB-IP>/` (Grafana), `http://<LB-IP>/prometheus/` (Prometheus UI), `http://<LB-IP>/loki/` (Loki API; Explore still uses the in-cluster datasource). When `false`, the script removes that Ingress. |
 | `ENABLE_EXTERNAL_DNS` | If `true`, installs **external-dns** (Cloudflare) into `monitoring` using `helm/external-dns/values-cloudflare.yaml`. Requires `EXTERNAL_DNS_DOMAIN_FILTER` and `CF_API_TOKEN`. |
 | `EXTERNAL_DNS_PROVIDER` | Only **`cloudflare`** is automated by `deploy-monitoring.sh`. **Hetzner DNS** is not a built-in upstream provider; use Cloudflare here, manage records manually, or add a separate webhook-based setup. |
 | `EXTERNAL_DNS_DOMAIN_FILTER` | DNS zone name managed in Cloudflare (e.g. `mydomain.com`). |
@@ -100,13 +100,14 @@ Optional informational aliases (not read by the deploy script unless you extend 
 ## Storage and Helm overlays
 
 - **Ephemeral mode:** `helm/kube-prometheus-stack/values-ephemeral.yaml` and `helm/loki/values-ephemeral.yaml` are merged when `MONITORING_USE_EPHEMERAL_STORAGE=true`.
+- **LB IP UI paths:** `helm/kube-prometheus-stack/values-lb-ip-ui.yaml` is merged when `MONITORING_UI_VIA_LB_IP=true` (Prometheus `routePrefix` `/prometheus`). The deploy script then sets `prometheus.prometheusSpec.externalUrl` from the ingress controller’s load balancer address when it is known.
 - **Persistent mode:** set `MONITORING_USE_EPHEMERAL_STORAGE=false` and ensure StorageClasses and CSI work so PVCs for Grafana, Prometheus, and Loki can bind.
 
 ## DNS and TLS
 
 1. **Automated (Cloudflare):** Set `ENABLE_EXTERNAL_DNS=true`, `EXTERNAL_DNS_PROVIDER=cloudflare`, `EXTERNAL_DNS_DOMAIN_FILTER`, and `CF_API_TOKEN`. Recreate records by re-running `deploy-monitoring.sh` after changing Ingress hostnames. Ensure the zone’s nameservers point at Cloudflare.
 2. **Manual:** Create `A` or `AAAA` records for `GRAFANA_HOST` / `PROMETHEUS_HOST` / `LOKI_HOST` to the **external IP** of `ingress-nginx-controller` in `monitoring`: `kubectl -n monitoring get svc ingress-nginx-controller`.
-3. **No DNS:** Use `MONITORING_UI_VIA_LB_IP=true` for Grafana on the LB IP, or `kubectl port-forward` (see below).
+3. **No DNS:** Use `MONITORING_UI_VIA_LB_IP=true` for Grafana, Prometheus, and the Loki API path on the **same** load balancer IP, or `kubectl port-forward` (see below).
 
 For HTTPS with Let’s Encrypt, set `ENABLE_CERT_MANAGER=true`, valid hostnames, and DNS that resolves to the load balancer before certificates can succeed.
 
@@ -115,17 +116,19 @@ For HTTPS with Let’s Encrypt, set `ENABLE_CERT_MANAGER=true`, valid hostnames,
 | Method | When to use |
 | ------ | ----------- |
 | **Ingress hostname** | Set `GRAFANA_HOST` to a name that resolves to the LB; optional TLS via cert-manager. URL: `https://$GRAFANA_HOST` |
-| **HTTP via LB IP** | `MONITORING_UI_VIA_LB_IP=true` → `http://<EXTERNAL-IP>/` (from `kubectl -n monitoring get svc ingress-nginx-controller`) |
-| **Port-forward** | No ingress/DNS: `kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80` → `http://localhost:3000` |
+| **HTTP via LB IP** | `MONITORING_UI_VIA_LB_IP=true` → `EXTERNAL-IP` from `kubectl -n monitoring get svc ingress-nginx-controller` — Grafana `http://<IP>/`, Prometheus `http://<IP>/prometheus/`, Loki API `http://<IP>/loki/` |
+| **Port-forward** | No ingress/DNS: e.g. `kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80` → `http://localhost:3000` |
 
 Credentials: user **`admin`**, password from **`GRAFANA_ADMIN_PASSWORD`** (or **`admin`** if unset).
 
-**Prometheus / Loki UIs without DNS:** Port-forward the services, for example:
+**Without the LB IP Ingress**, port-forward Prometheus / Loki:
 
 ```bash
 kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090
 kubectl -n monitoring port-forward svc/loki 3100:3100
 ```
+
+Then open `http://localhost:9090` and `http://localhost:3100`.
 
 ## Cross-Cluster Monitoring
 
