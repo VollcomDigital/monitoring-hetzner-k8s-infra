@@ -85,7 +85,7 @@ Equivalent helper for provisioning:
 | `HCLOUD_REGION` | Hetzner location for LB annotations (default `nbg1`). |
 | `KUBECONFIG` | Path to kubeconfig (default `./kubeconfig.yaml`). |
 | `MONITORING_USE_EPHEMERAL_STORAGE` | If `true`, Grafana/Prometheus/Loki use emptyDir-style storage via extra Helm values so the stack installs without waiting on PVC binding (default `true`). Set `false` when CSI volumes bind and you want durable TSDB, Grafana, and Loki data on disks. |
-| `GRAFANA_HOST`, `PROMETHEUS_HOST`, `LOKI_HOST` | Hostnames for name-based Ingress objects. **Placeholder names like `*.example.com` do not point at your cluster** until you create DNS (or use ExternalDNS / `/etc/hosts`). Leave empty to skip applying those Ingress manifests. |
+| `GRAFANA_HOST`, `PROMETHEUS_HOST`, `LOKI_HOST` | FQDNs you control for Grafana, Prometheus, and Loki Ingress (e.g. `grafana.mydomain.com`). **Names such as `*.example.com` only work if you own that DNS zone**—otherwise leave empty, use **MONITORING_UI_VIA_LB_IP** for Grafana, or use port-forward. Empty values skip applying that Ingress. |
 | `MONITORING_UI_VIA_LB_IP` | If `true`, deploys `kubernetes/monitoring/grafana-ingress-ip.yaml` so Grafana is reachable at **`http://<ingress-load-balancer-IP>/`** (HTTP, no DNS). |
 | `ENABLE_EXTERNAL_DNS` | If `true`, installs **external-dns** (Cloudflare) into `monitoring` using `helm/external-dns/values-cloudflare.yaml`. Requires `EXTERNAL_DNS_DOMAIN_FILTER` and `CF_API_TOKEN`. |
 | `EXTERNAL_DNS_PROVIDER` | Only **`cloudflare`** is automated by `deploy-monitoring.sh`. **Hetzner DNS** is not a built-in upstream provider; use Cloudflare here, manage records manually, or add a separate webhook-based setup. |
@@ -149,7 +149,7 @@ Disabled by default. To enable:
 ## Operational notes
 
 - **ingress-nginx:** Validating admission webhooks may be disabled in `helm/nginx-ingress/values.yaml` when the API server cannot reach in-cluster admission endpoints (common on some control-plane setups). Ingress resources still work; only admission-time validation is skipped.
-- **Placeholders:** Do not rely on default `*.example.com` hostnames until DNS exists or you use LB IP / port-forward.
+- **Hostnames:** Do not set `GRAFANA_HOST` / `PROMETHEUS_HOST` / `LOKI_HOST` to `*.example.com` unless you control that domain; use your own FQDNs and DNS, LB IP mode for Grafana, or port-forward.
 
 ## Troubleshooting
 
