@@ -171,7 +171,20 @@ if [[ -n "${LOKI_HOST:-}" ]]; then
     "$PROJECT_DIR/kubernetes/monitoring/loki-ingress.yaml" | kubectl apply -f -
 fi
 
+if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
+  kubectl apply -f "$PROJECT_DIR/kubernetes/monitoring/grafana-ingress-ip.yaml"
+fi
+
 echo ""
 echo "Monitoring platform deployed successfully."
-echo "Grafana URL: https://${GRAFANA_HOST:-<set-GRAFANA_HOST>}"
+if [[ "${MONITORING_UI_VIA_LB_IP:-false}" == "true" ]]; then
+  lb_ip="$(kubectl -n monitoring get svc ingress-nginx-controller \
+    -o jsonpath='{.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+  if [[ -n "$lb_ip" ]]; then
+    echo "Grafana (HTTP via LB IP): http://${lb_ip}/"
+  else
+    echo "Grafana (HTTP via LB IP): set MONITORING_UI_VIA_LB_IP and wait for ingress-nginx-controller EXTERNAL-IP, then open http://<that-ip>/"
+  fi
+fi
+echo "Grafana URL (hostname ingress): https://${GRAFANA_HOST:-<set-GRAFANA_HOST-or-use-MONITORING_UI_VIA_LB_IP>}"
 echo "Grafana user: admin"
