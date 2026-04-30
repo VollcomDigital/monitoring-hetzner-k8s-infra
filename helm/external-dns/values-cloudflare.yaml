@@ -1,0 +1,13 @@
+provider:
+  name: cloudflare
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: external-dns-credentials
+        key: cf_api_token
+sources:
+  - ingress
+policy: upsert-only
+registry: txt
+txtOwnerId: monitoring-hetzner-k8s

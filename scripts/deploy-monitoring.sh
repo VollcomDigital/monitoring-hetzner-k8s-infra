@@ -48,6 +48,7 @@ kubectl apply -k "$PROJECT_DIR/kubernetes/core/hcloud-ccm/"
 kubectl apply -k "$PROJECT_DIR/kubernetes/core/hcloud-csi/"
 
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
+helm repo add external-dns https://kubernetes-sigs.github.io/external-dns >/dev/null 2>&1 || true
 helm repo add jetstack https://charts.jetstack.io >/dev/null 2>&1 || true
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
 helm repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1 || true
@@ -70,6 +71,35 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
   --values "$PROJECT_DIR/helm/nginx-ingress/values.yaml" \
   --set controller.service.annotations."load-balancer\.hetzner\.cloud/location"="$HCLOUD_REGION" \
   --wait --timeout 10m
+
+if [[ "${ENABLE_EXTERNAL_DNS:-false}" == "true" ]]; then
+  case "${EXTERNAL_DNS_PROVIDER:-cloudflare}" in
+    cloudflare)
+      if [[ -z "${CF_API_TOKEN:-}" || -z "${EXTERNAL_DNS_DOMAIN_FILTER:-}" ]]; then
+        echo "ERROR: ENABLE_EXTERNAL_DNS=true with cloudflare requires CF_API_TOKEN and EXTERNAL_DNS_DOMAIN_FILTER."
+        exit 1
+      fi
+      kubectl -n monitoring create secret generic external-dns-credentials \
+        --from-literal=cf_api_token="$CF_API_TOKEN" \
+        --dry-run=client -o yaml | kubectl apply -f -
+      helm upgrade --install external-dns external-dns/external-dns \
+        --namespace monitoring \
+        --version 1.19.0 \
+        --values "$PROJECT_DIR/helm/external-dns/values-cloudflare.yaml" \
+        --set "domainFilters[0]=${EXTERNAL_DNS_DOMAIN_FILTER}" \
+        --wait --timeout 10m
+      ;;
+    hetzner)
+      echo "ERROR: EXTERNAL_DNS_PROVIDER=hetzner is not installed by this script."
+      echo "Upstream external-dns has no built-in Hetzner DNS provider; use Cloudflare here, point records manually to the ingress LB, or deploy external-dns with a Hetzner webhook provider chart."
+      exit 1
+      ;;
+    *)
+      echo "ERROR: Only EXTERNAL_DNS_PROVIDER=cloudflare is automated; got '${EXTERNAL_DNS_PROVIDER:-}'."
+      exit 1
+      ;;
+  esac
+fi
 
 if [[ "$ENABLE_CERT_MANAGER" == "true" ]]; then
   if [[ -z "${ACME_EMAIL:-}" ]]; then
