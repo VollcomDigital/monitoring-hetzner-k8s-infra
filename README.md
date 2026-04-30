@@ -172,6 +172,7 @@ Disabled by default. To enable:
 - Promtail: `kubectl -n monitoring logs ds/promtail`.
 - Prometheus remote write: check `PROMETHEUS_HOST`, ingress, and TLS.
 - Ingress admission errors (`validate.nginx.ingress.kubernetes.io` timeouts): see **Operational notes** above.
+- **`SyncLoadBalancerFailed` / `providerID does not have one of the expected prefixes … k3s://…`:** The Hetzner CCM needs **`spec.providerID=hcloud://<server-id>`** on each node. Current cloud-init replaces the default **`k3s://`** ID using the [Hetzner metadata](https://docs.hetzner.com/cloud/servers/metadata/) `instance-id`. **New clusters:** `terraform apply` (replace nodes) with updated `terraform/cloud-init/*.tftpl`, or rebuild workers/control plane. **Existing cluster without replacing VMs:** for each node, get the numeric server id in the Hetzner console (or API), then e.g. `kubectl patch node <name> -p '{"spec":{"providerID":"hcloud://<id>"}}' --type=merge` and restart `k3s` on that node if the field does not stick; confirm with `kubectl get node <name> -o jsonpath='{.spec.providerID}'`.
 
 ## Observability Standards
 

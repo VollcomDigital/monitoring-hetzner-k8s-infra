@@ -17,6 +17,7 @@ write_files:
       br_netfilter
       overlay
 
+  # PLACEHOLDER_HCLOUD_PROVIDER_ID replaced at boot (Hetzner CCM requires hcloud://<id>, not k3s://).
   - path: /etc/rancher/k3s/config.yaml
     content: |
       node-name: "${node_name}"
@@ -31,6 +32,7 @@ write_files:
       write-kubeconfig-mode: "0644"
       kubelet-arg:
         - "cloud-provider=external"
+        - "provider-id=PLACEHOLDER_HCLOUD_PROVIDER_ID"
 
 runcmd:
   - sysctl --system
@@ -39,6 +41,10 @@ runcmd:
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
     apt-get install -y -qq jq open-iscsi nfs-common
+  - |
+    INSTANCE_ID=$(curl -sf http://169.254.169.254/hetzner/v1/instance-id)
+    test -n "$$INSTANCE_ID"
+    sed -i "s|PLACEHOLDER_HCLOUD_PROVIDER_ID|hcloud://$$INSTANCE_ID|g" /etc/rancher/k3s/config.yaml
   %{ if is_first_server }
   - |
     curl -sfL https://get.k3s.io | \
