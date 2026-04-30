@@ -17,7 +17,14 @@ if [[ "$CONFIRM" != "destroy" ]]; then
 fi
 
 cd "$TERRAFORM_DIR"
-terraform destroy "$@"
+destroy_ec=0
+terraform destroy "$@" || destroy_ec=$?
 
 rm -f "$PROJECT_DIR/kubeconfig.yaml"
-echo "All resources destroyed."
+
+if [[ "$destroy_ec" -eq 0 ]]; then
+  echo "All resources destroyed."
+else
+  echo "WARN: terraform destroy exited $destroy_ec; kubeconfig.yaml removed if present. Fix errors and run terraform destroy again if resources remain."
+fi
+exit "$destroy_ec"
